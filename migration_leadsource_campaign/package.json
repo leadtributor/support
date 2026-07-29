@@ -1,0 +1,11 @@
+{
+  "name": "migrate_leadsource_campaign_example",
+  "version": "1.0.0",
+  "description": "Framework script to migrate existing leads to the Leadquelle/Kampagne fields",
+  "type": "module",
+  "main": "index.mjs",
+  "private": true,
+  "dependencies": {
+    "axios": "^1.6.7"
+  }
+}
