@@ -140,17 +140,19 @@ Writing happens with `PATCH /leads/{leadId}`. Two properties are decisive:
   always send the **complete** `interest` list of the lead (all existing fields plus
   the new values). Sending only the two new fields deletes every other `interest`
   field of that lead.
-- **The field types are single-value.** `text:list:leadsource` and
-  `text:list:campaign` accept **at most one** element in the `value` array; a request
-  carrying more is rejected. The value is therefore written as a single-element array:
+- **The new values are written as `text:singleline`.** The selectlist semantics (field
+  types `text:list:leadsource` / `text:list:campaign`) live in the form definition and
+  apply at display time — on the lead, every single-value list value is stored as a
+  plain string. Requests declaring the list type with a single-element array are still
+  accepted and stored in the same shape.
 
 ```json
 {
   "interest": {
     "fields": {
-      "…your existing fields…": { "type": "text:singleline", "value": ["…"] },
-      "Lead source": { "type": "text:list:leadsource", "value": ["Website"] },
-      "Campaign":    { "type": "text:list:campaign",   "value": ["Spring campaign 2026"] }
+      "…your existing fields…": { "type": "text:singleline", "value": "…" },
+      "Lead source": { "type": "text:singleline", "value": "Website" },
+      "Campaign":    { "type": "text:singleline", "value": "Spring campaign 2026" }
     }
   }
 }

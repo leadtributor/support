@@ -147,17 +147,19 @@ Geschrieben wird mit `PATCH /leads/{leadId}`. Zwei Eigenschaften sind entscheide
   überschrieben. Sie senden also immer die **komplette** `interest`-Liste des Leads
   (alle bestehenden Felder plus die neuen Werte). Wer nur die zwei neuen Felder
   sendet, löscht alle anderen `interest`-Felder des Leads.
-- **Die Feldtypen sind einwertig.** `text:list:leadsource` und `text:list:campaign`
-  akzeptieren im `value`-Array **höchstens ein** Element; ein Request mit mehr Werten
-  wird abgelehnt. Der Wert wird also als einelementiges Array geschrieben:
+- **Die neuen Werte werden als `text:singleline` geschrieben.** Die Auswahllisten-Semantik
+  (Feldtypen `text:list:leadsource` / `text:list:campaign`) lebt in der Formular-Definition
+  und wirkt bei der Anzeige — am Lead wird jeder einwertige Listen-Wert als einfacher
+  String gespeichert. Requests, die stattdessen den Listentyp mit einem einelementigen
+  Array deklarieren, akzeptiert die API weiterhin und speichert sie in derselben Form.
 
 ```json
 {
   "interest": {
     "fields": {
-      "…Ihre bestehenden Felder…": { "type": "text:singleline", "value": ["…"] },
-      "Leadquelle": { "type": "text:list:leadsource", "value": ["Website"] },
-      "Kampagne":   { "type": "text:list:campaign",   "value": ["Frühjahrsaktion 2026"] }
+      "…Ihre bestehenden Felder…": { "type": "text:singleline", "value": "…" },
+      "Leadquelle": { "type": "text:singleline", "value": "Website" },
+      "Kampagne":   { "type": "text:singleline", "value": "Frühjahrsaktion 2026" }
     }
   }
 }

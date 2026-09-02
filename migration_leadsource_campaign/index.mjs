@@ -168,13 +168,17 @@ function buildUpdatedInterest(interest, { leadSource, campaign }) {
     const fields = { ...(interest?.fields ?? {}) };
     const fieldOrder = [...(interest?.fieldOrder ?? [])];
 
-    const upsert = (name, type, value) => {
-        fields[name] = { type, value: [value] };
+    // Single-value lists persist as text:singleline on the lead — the selectlist rendering
+    // comes from the form definition at display time, and the Lead-Performance report
+    // resolves the semantics through the form. Writing the subtype here would only be
+    // flattened to this shape by the API anyway.
+    const upsert = (name, value) => {
+        fields[name] = { type: 'text:singleline', value };
         if (fieldOrder.length > 0 && !fieldOrder.includes(name)) fieldOrder.push(name);
     };
 
-    if (leadSource) upsert(LEADSOURCE_FIELD, 'text:list:leadsource', leadSource);
-    if (campaign) upsert(CAMPAIGN_FIELD, 'text:list:campaign', campaign);
+    if (leadSource) upsert(LEADSOURCE_FIELD, leadSource);
+    if (campaign) upsert(CAMPAIGN_FIELD, campaign);
 
     return { ...interest, fields, ...(fieldOrder.length > 0 && { fieldOrder }) };
 }
