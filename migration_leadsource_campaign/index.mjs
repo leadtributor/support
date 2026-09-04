@@ -208,7 +208,7 @@ async function withRetry(fn) {
     }
 }
 
-let processed = 0, updated = 0, skipped = 0, failed = 0;
+let processed = 0, updated = 0, skipped = 0, failed = 0, protectedLeads = 0, alreadyCorrect = 0;
 
 console.log(`Migrating leads on ${LEADTRIBUTOR_URL} ${DRY_RUN ? '(DRY RUN — nothing will be written)' : '(LIVE RUN)'}${OVERWRITE ? ' (OVERWRITE — existing values will be replaced)' : ''}`);
 
@@ -225,9 +225,23 @@ for await (const { leadId, createdAt } of listLeads()) {
             leadSource: currentValue(lead[TARGET_FIELD_LIST], LEADSOURCE_FIELD),
             campaign: currentValue(lead[TARGET_FIELD_LIST], CAMPAIGN_FIELD),
         };
+        const kept = [];
         for (const key of ['leadSource', 'campaign']) {
             if (!present[key]) continue;
-            if (!OVERWRITE || present[key] === derived[key]) delete derived[key];
+            if (OVERWRITE && present[key] !== derived[key]) continue;   // will be replaced below
+            if (derived[key] !== undefined && derived[key] !== present[key]) {
+                kept.push(`${key} '${present[key]}' kept, mapping proposed '${derived[key]}'`);
+            } else if (derived[key] !== undefined) {
+                alreadyCorrect++;
+            }
+            delete derived[key];
+        }
+        // The audit trail for "existing values must not be overwritten": every case where a
+        // mapping value was dropped in favour of what the lead already carries is named, so
+        // the run can be shown to have kept them — and so contradictions in the mapping surface.
+        if (kept.length > 0) {
+            protectedLeads++;
+            console.log(`KEEPING existing on lead ${leadId}: ${kept.join('; ')}`);
         }
 
         if (!derived.leadSource && !derived.campaign) {
@@ -253,3 +267,4 @@ for await (const { leadId, createdAt } of listLeads()) {
 }
 
 console.log(`Done. ${processed} processed, ${updated} ${DRY_RUN ? 'would be updated' : 'updated'}, ${skipped} skipped (no value derived or already set), ${failed} failed.`);
+console.log(`Of those: ${protectedLeads} lead(s) kept an existing value that differs from the mapping (see the KEEPING lines above), ${alreadyCorrect} field(s) already carried the mapped value.`);

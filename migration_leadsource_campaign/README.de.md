@@ -412,7 +412,15 @@ API_KEY=<ihr-api-key> CSV_FILE=./mapping.csv node index.mjs
 
 Hat ein Lauf einen falschen Wert geschrieben — etwa aus einer CSV mit vertauschten
 Spalten —, kommt ein neuer Lauf nicht dagegen an: das Feld ist nicht mehr leer und
-wird geschützt. Für diesen Fall gibt es `OVERWRITE=true`. Ersetzt wird dann nur, wo
+wird geschützt. Jeder so geschützte Wert wird protokolliert:
+
+```
+KEEPING existing on lead <leadId>: leadSource 'Google Ads' kept, mapping proposed 'Google'
+```
+
+Diese Zeilen sind zugleich der Nachweis, dass nichts überschrieben wurde, und zeigen, wo Ihre
+Mapping-Tabelle den bereits gepflegten Werten widerspricht. Die Abschlusszeile zählt sie.
+Wollen Sie diese Werte *doch* ersetzen, gibt es `OVERWRITE=true`. Ersetzt wird dann nur, wo
 sich der Wert tatsächlich unterscheidet; die Ausgabe zeigt den Austausch als
 `campaign='alt' -> 'neu'`. Erst im Dry-Run prüfen:
 

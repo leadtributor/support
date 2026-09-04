@@ -387,6 +387,15 @@ API_KEY=<your-api-key> CSV_FILE=./mapping.csv node index.mjs
 
 ### Repairing wrong values
 
+Every protected value is logged:
+
+```
+KEEPING existing on lead <leadId>: leadSource 'Google Ads' kept, mapping proposed 'Google'
+```
+
+Those lines are both the proof that nothing was overwritten and a list of the places where
+your mapping contradicts values that are already maintained; the closing line counts them.
+
 If a run wrote a wrong value — say from a CSV with swapped columns — a new run cannot
 undo it: the field is no longer empty and is therefore protected. That is what
 `OVERWRITE=true` is for. It only replaces values that actually differ, and the output

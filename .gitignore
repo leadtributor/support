@@ -1,0 +1,4 @@
+node_modules/
+
+# Mapping-/Testdaten der Migrationsläufe bleiben lokal — sie enthalten Kunden-leadIds.
+*.csv
