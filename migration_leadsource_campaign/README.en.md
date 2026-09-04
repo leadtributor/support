@@ -200,6 +200,8 @@ environment:
 | `LEADTRIBUTOR_URL` | `https://api.leadtributor.cloud` | Target API. For rehearsals set it to `https://api.demo.leadtributor.cloud`. |
 | `CSV_FILE` | *unset* | Path to the mapping CSV; activates strategy C. |
 | `OVERWRITE` | `false` | Only with `OVERWRITE=true`: replaces values that are already present — and only where the derived value actually differs. Use it to repair wrong values from an earlier run. |
+| `FIELD_LIST` | `interest` | Which field list carries the target fields: `interest` (enquiry block) or `prospect` (contact block). |
+| `LEADSOURCE_FIELD` / `CAMPAIGN_FIELD` | `Leadquelle` / `Kampagne` | Override the field labels from the script without editing the file. |
 
 Note the default of `LEADTRIBUTOR_URL`: **without further configuration, the script
 runs against Live.**
@@ -216,8 +218,9 @@ The file is deliberately split into two zones:
 The target labels sit at the top and must match the fields in *your* form exactly:
 
 ```js
-const LEADSOURCE_FIELD = 'Leadquelle';
-const CAMPAIGN_FIELD = 'Kampagne';
+const LEADSOURCE_FIELD = process.env['LEADSOURCE_FIELD'] || 'Leadquelle';
+const CAMPAIGN_FIELD = process.env['CAMPAIGN_FIELD'] || 'Kampagne';
+const TARGET_FIELD_LIST = process.env['FIELD_LIST'] || 'interest';
 ```
 
 Optionally, a mapping table normalises free-text spellings to your canonical values.

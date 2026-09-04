@@ -31,9 +31,17 @@ const OVERWRITE = process.env['OVERWRITE'] === 'true';
 // CUSTOMIZE HERE — everything below this block is generic plumbing.
 // ===========================================================================
 
-// The labels of the target fields, exactly as they appear in YOUR lead form.
-const LEADSOURCE_FIELD = 'Leadquelle';
-const CAMPAIGN_FIELD = 'Kampagne';
+// The labels of the target fields, exactly as they appear in YOUR lead form, and
+// which of the two field lists carries them — 'prospect' (the contact block) or
+// 'interest' (the enquiry block). Each can also be set via an environment variable,
+// so a one-off run does not have to edit this file.
+const LEADSOURCE_FIELD = process.env['LEADSOURCE_FIELD'] || 'Leadquelle';
+const CAMPAIGN_FIELD = process.env['CAMPAIGN_FIELD'] || 'Kampagne';
+const TARGET_FIELD_LIST = process.env['FIELD_LIST'] || 'interest';
+
+if (TARGET_FIELD_LIST !== 'prospect' && TARGET_FIELD_LIST !== 'interest') {
+    throw new Error(`FIELD_LIST must be 'prospect' or 'interest', got '${TARGET_FIELD_LIST}'`);
+}
 
 // Optional: normalize free-text spellings to your canonical values.
 // Keys are matched case-insensitively; unmapped values pass through unchanged.
@@ -152,21 +160,21 @@ async function* listLeads() {
     } while (continuation);
 }
 
-function currentValue(interest, fieldName) {
-    const value = interest?.fields?.[fieldName]?.value;
+function currentValue(fieldList, fieldName) {
+    const value = fieldList?.fields?.[fieldName]?.value;
     return Array.isArray(value) ? value[0] : value;
 }
 
 /**
- * Merge the derived values into the lead's interest field list.
+ * Merge the derived values into the lead's target field list.
  *
  * The Public API modifies a field list AS A WHOLE, so the returned object is
- * the complete interest list from the lead plus the new/updated fields —
- * never just the two fields alone (that would drop all other interest fields).
+ * the complete list from the lead plus the new/updated fields — never just the
+ * two fields alone (that would drop all other fields of that list).
  */
-function buildUpdatedInterest(interest, { leadSource, campaign }) {
-    const fields = { ...(interest?.fields ?? {}) };
-    const fieldOrder = [...(interest?.fieldOrder ?? [])];
+function buildUpdatedFieldList(fieldList, { leadSource, campaign }) {
+    const fields = { ...(fieldList?.fields ?? {}) };
+    const fieldOrder = [...(fieldList?.fieldOrder ?? [])];
 
     // Single-value lists persist as text:singleline on the lead — the selectlist rendering
     // comes from the form definition at display time, and the Lead-Performance report
@@ -180,7 +188,7 @@ function buildUpdatedInterest(interest, { leadSource, campaign }) {
     if (leadSource) upsert(LEADSOURCE_FIELD, leadSource);
     if (campaign) upsert(CAMPAIGN_FIELD, campaign);
 
-    return { ...interest, fields, ...(fieldOrder.length > 0 && { fieldOrder }) };
+    return { ...fieldList, fields, ...(fieldOrder.length > 0 && { fieldOrder }) };
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -214,8 +222,8 @@ for await (const { leadId, createdAt } of listLeads()) {
         // Idempotency: values already present are kept. With OVERWRITE they are replaced,
         // but only where the derived value actually differs — no pointless updates.
         const present = {
-            leadSource: currentValue(lead.interest, LEADSOURCE_FIELD),
-            campaign: currentValue(lead.interest, CAMPAIGN_FIELD),
+            leadSource: currentValue(lead[TARGET_FIELD_LIST], LEADSOURCE_FIELD),
+            campaign: currentValue(lead[TARGET_FIELD_LIST], CAMPAIGN_FIELD),
         };
         for (const key of ['leadSource', 'campaign']) {
             if (!present[key]) continue;
@@ -230,8 +238,8 @@ for await (const { leadId, createdAt } of listLeads()) {
                 .join(', ');
             console.log(`${DRY_RUN ? 'WOULD update' : 'Updating'} lead ${leadId} (created ${createdAt}): ${changes}`);
             if (!DRY_RUN) {
-                const interest = buildUpdatedInterest(lead.interest, derived);
-                await withRetry(() => http.patch(`/leads/${leadId}`, { interest }));
+                const fieldList = buildUpdatedFieldList(lead[TARGET_FIELD_LIST], derived);
+                await withRetry(() => http.patch(`/leads/${leadId}`, { [TARGET_FIELD_LIST]: fieldList }));
             }
             updated++;
         }

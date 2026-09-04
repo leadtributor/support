@@ -208,6 +208,8 @@ Environment:
 | `LEADTRIBUTOR_URL` | `https://api.leadtributor.cloud` | Ziel-API. Für Probeläufe auf `https://api.demo.leadtributor.cloud` setzen. |
 | `CSV_FILE` | *nicht gesetzt* | Pfad zur Mapping-CSV; aktiviert Strategie C. |
 | `OVERWRITE` | `false` | Nur mit `OVERWRITE=true`: ersetzt auch bereits vorhandene Werte — und zwar nur dort, wo sich der Wert tatsächlich unterscheidet. Zum Korrigieren falscher Werte aus einem früheren Lauf. |
+| `FIELD_LIST` | `interest` | Feldliste, die die Zielfelder trägt: `interest` (Anfrage-Block) oder `prospect` (Kontakt-Block). |
+| `LEADSOURCE_FIELD` / `CAMPAIGN_FIELD` | `Leadquelle` / `Kampagne` | Überschreiben die Feld-Labels aus dem Skript, ohne die Datei zu bearbeiten. |
 
 Beachten Sie den Default von `LEADTRIBUTOR_URL`: **ohne weitere Angabe läuft das
 Skript gegen Live.**
@@ -222,12 +224,18 @@ Die Datei ist bewusst in zwei Zonen geteilt:
   Hier ist keine Änderung nötig.
 
 Die Ziel-Labels stehen direkt oben und müssen exakt den Feldern in *Ihrem* Formular
-entsprechen:
+entsprechen. `TARGET_FIELD_LIST` bestimmt, in welcher der beiden Feldlisten diese
+Felder liegen — `interest` (Anfrage-Block) oder `prospect` (Kontakt-Block); im
+Zweifel schauen Sie im Formular-Editor nach, in welchem Block das Feld steht:
 
 ```js
-const LEADSOURCE_FIELD = 'Leadquelle';
-const CAMPAIGN_FIELD = 'Kampagne';
+const LEADSOURCE_FIELD = process.env['LEADSOURCE_FIELD'] || 'Leadquelle';
+const CAMPAIGN_FIELD = process.env['CAMPAIGN_FIELD'] || 'Kampagne';
+const TARGET_FIELD_LIST = process.env['FIELD_LIST'] || 'interest';
 ```
+
+Alle drei lassen sich auch per Umgebungsvariable setzen, wenn Sie die Datei nicht
+anfassen möchten.
 
 Optional normalisiert eine Mapping-Tabelle Freitext-Schreibweisen auf Ihre
 kanonischen Werte. Die Schlüssel werden **ohne Rücksicht auf Groß-/Kleinschreibung**
@@ -460,6 +468,7 @@ halbe Stunde — pro Lauf, also auch für den Probelauf.
 | Sofortiger Abbruch beim ersten Aufruf, `401`/`403` | `API_KEY` fehlt, ist ungültig oder gehört zur anderen Umgebung (Live-Key gegen Demo-API oder umgekehrt). |
 | Alle Leads `FAILED` mit `403` beim `PATCH` | Der Key hat keine Schreibrechte, oder die Leads gehören nicht Ihrem Unternehmen. |
 | Einzelne Leads `FAILED` mit `400` | Feld-Label stimmt nicht mit dem Formular überein, oder es sollte mehr als ein Wert geschrieben werden. `LEADSOURCE_FIELD`/`CAMPAIGN_FIELD` prüfen. |
+| Alles `skipped`, obwohl die Zielfelder leer sind | Die Zielfelder liegen in der anderen Feldliste — `FIELD_LIST` auf `prospect` bzw. `interest` umstellen. |
 | Alles `skipped`, keine `WOULD update`-Zeile | Die Strategie liefert nichts: falscher Quellfeldname, Zeitfenster passt nicht, oder das Quellfeld ist ein Auswahlfeld (Array) — dann `currentValue()` nutzen. |
 | Ein Feld wird nicht gesetzt, obwohl die CSV einen Wert dafür hat | Das Zielfeld ist bereits gefüllt und wird deshalb geschützt — auch wenn der vorhandene Wert falsch ist. Mit `OVERWRITE=true` korrigieren. |
 | Weniger Leads verarbeitet als im Account vorhanden | Vergleichen Sie die `processed`-Zahl mit der Gesamtzahl im `X-Total`-Header von `GET /leads`. Bei einer Abweichung den Lauf wiederholen — dank Idempotenz füllt er die verbliebenen Lücken. |
