@@ -26,6 +26,9 @@ const DRY_RUN = process.env['DRY_RUN'] !== 'false';
 // With OVERWRITE=true a derived value replaces an existing one — use this to repair
 // wrong values from an earlier run, and always dry-run it first.
 const OVERWRITE = process.env['OVERWRITE'] === 'true';
+// Dumps the exact request body of a failed lead — the fastest way to see which field a
+// validation error refers to. Off by default: the payload contains customer data.
+const LOG_PAYLOAD_ON_ERROR = process.env['LOG_PAYLOAD_ON_ERROR'] === 'true';
 
 // ===========================================================================
 // CUSTOMIZE HERE — everything below this block is generic plumbing.
@@ -214,6 +217,7 @@ console.log(`Migrating leads on ${LEADTRIBUTOR_URL} ${DRY_RUN ? '(DRY RUN — no
 
 for await (const { leadId, createdAt } of listLeads()) {
     processed++;
+    let sentPayload;
     try {
         const { data: details } = await withRetry(() => http.get(`/leads/${leadId}`));
         const lead = { leadId, createdAt, ...details };
@@ -253,17 +257,29 @@ for await (const { leadId, createdAt } of listLeads()) {
             console.log(`${DRY_RUN ? 'WOULD update' : 'Updating'} lead ${leadId} (created ${createdAt}): ${changes}`);
             if (!DRY_RUN) {
                 const fieldList = buildUpdatedFieldList(lead[TARGET_FIELD_LIST], derived);
-                await withRetry(() => http.patch(`/leads/${leadId}`, { [TARGET_FIELD_LIST]: fieldList }));
+                sentPayload = { [TARGET_FIELD_LIST]: fieldList };
+                await withRetry(() => http.patch(`/leads/${leadId}`, sentPayload));
             }
             updated++;
         }
     } catch (error) {
         failed++;
-        // The response body carries what the message does not: a validation error names the
-        // offending field, and API Gateway's generic "Invalid request body" at least tells you
-        // the payload was rejected before it ever reached the service.
-        const detail = error.response?.data !== undefined ? ` — ${JSON.stringify(error.response.data)}` : '';
-        console.error(`FAILED lead ${leadId}: ${error.response?.status ?? ''} ${error.message}${detail}`);
+        // Everything the API actually said, not just axios' generic message: the body names the
+        // offending field when the service validates. When API Gateway rejects the body itself,
+        // its message stays generic ("Invalid request body") — then x-amzn-errortype identifies
+        // the rejecter and x-amzn-requestid lets you look the request up in CloudWatch.
+        const res = error.response;
+        const parts = [error.message];
+        if (res?.data !== undefined) parts.push(`body=${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
+        for (const header of ['x-amzn-errortype', 'x-amzn-requestid', 'apigw-requestid']) {
+            if (res?.headers?.[header]) parts.push(`${header}=${res.headers[header]}`);
+        }
+        console.error(`FAILED lead ${leadId}: ${res?.status ?? ''} ${parts.join(' ')}`);
+        // The payload is the other half of the picture — a rejected field can only be spotted in
+        // what was actually sent. Off by default: it contains customer data and bloats the log.
+        if (LOG_PAYLOAD_ON_ERROR && sentPayload) {
+            console.error(`  payload sent for ${leadId}: ${JSON.stringify(sentPayload)}`);
+        }
     }
 
     if (processed % 100 === 0) console.log(`... ${processed} leads processed`);
