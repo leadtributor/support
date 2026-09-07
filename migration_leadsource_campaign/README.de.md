@@ -475,7 +475,7 @@ halbe Stunde — pro Lauf, also auch für den Probelauf.
 | --- | --- |
 | Sofortiger Abbruch beim ersten Aufruf, `401`/`403` | `API_KEY` fehlt, ist ungültig oder gehört zur anderen Umgebung (Live-Key gegen Demo-API oder umgekehrt). |
 | Alle Leads `FAILED` mit `403` beim `PATCH` | Der Key hat keine Schreibrechte, oder die Leads gehören nicht Ihrem Unternehmen. |
-| Einzelne Leads `FAILED` mit `400` | Feld-Label stimmt nicht mit dem Formular überein, oder es sollte mehr als ein Wert geschrieben werden. `LEADSOURCE_FIELD`/`CAMPAIGN_FIELD` prüfen. |
+| Einzelne Leads `FAILED` mit `400` | Feld-Label stimmt nicht mit dem Formular überein, oder es sollte mehr als ein Wert geschrieben werden. `LEADSOURCE_FIELD`/`CAMPAIGN_FIELD` prüfen. Lautet die Meldung `Invalid request body`, hat die API den Body abgelehnt, bevor er den Dienst erreichte — dann mit `LOG_PAYLOAD_ON_ERROR=true` den gesendeten Payload ansehen. |
 | Alles `skipped`, obwohl die Zielfelder leer sind | Die Zielfelder liegen in der anderen Feldliste — `FIELD_LIST` auf `prospect` bzw. `interest` umstellen. |
 | Alles `skipped`, keine `WOULD update`-Zeile | Die Strategie liefert nichts: falscher Quellfeldname, Zeitfenster passt nicht, oder das Quellfeld ist ein Auswahlfeld (Array) — dann `currentValue()` nutzen. |
 | Ein Feld wird nicht gesetzt, obwohl die CSV einen Wert dafür hat | Das Zielfeld ist bereits gefüllt und wird deshalb geschützt — auch wenn der vorhandene Wert falsch ist. Mit `OVERWRITE=true` korrigieren. |

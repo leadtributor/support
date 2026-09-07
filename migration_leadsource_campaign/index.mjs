@@ -191,6 +191,19 @@ function buildUpdatedFieldList(fieldList, { leadSource, campaign }) {
     if (leadSource) upsert(LEADSOURCE_FIELD, leadSource);
     if (campaign) upsert(CAMPAIGN_FIELD, campaign);
 
+    // A lead field can carry a type but no value at all: JSON.stringify drops a property whose
+    // value is undefined, so an import that mapped a csv column missing from a row persisted
+    // { type } alone. The API requires both, so such a field — merely carried along by the
+    // round trip — makes the whole request invalid (400 "Invalid request body") and blocks a
+    // lead that is otherwise fine. An empty string is what a value-less field already means
+    // everywhere else in the platform, so filling it in changes nothing but the shape.
+    for (const [name, field] of Object.entries(fields)) {
+        if (field && typeof field === 'object' && !('value' in field)) {
+            fields[name] = { ...field, value: '' };
+            valuelessFields++;
+        }
+    }
+
     return { ...fieldList, fields, ...(fieldOrder.length > 0 && { fieldOrder }) };
 }
 
@@ -211,7 +224,7 @@ async function withRetry(fn) {
     }
 }
 
-let processed = 0, updated = 0, skipped = 0, failed = 0, protectedLeads = 0, alreadyCorrect = 0;
+let processed = 0, updated = 0, skipped = 0, failed = 0, protectedLeads = 0, alreadyCorrect = 0, valuelessFields = 0;
 
 console.log(`Migrating leads on ${LEADTRIBUTOR_URL} ${DRY_RUN ? '(DRY RUN — nothing will be written)' : '(LIVE RUN)'}${OVERWRITE ? ' (OVERWRITE — existing values will be replaced)' : ''}`);
 
@@ -288,3 +301,4 @@ for await (const { leadId, createdAt } of listLeads()) {
 
 console.log(`Done. ${processed} processed, ${updated} ${DRY_RUN ? 'would be updated' : 'updated'}, ${skipped} skipped (no value derived or already set), ${failed} failed.`);
 console.log(`Of those: ${protectedLeads} lead(s) kept an existing value that differs from the mapping (see the KEEPING lines above), ${alreadyCorrect} field(s) already carried the mapped value.`);
+if (valuelessFields > 0) console.log(`${valuelessFields} pre-existing field(s) carried a type but no value and were sent as an empty string — otherwise the API rejects the whole request.`);

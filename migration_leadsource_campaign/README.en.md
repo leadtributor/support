@@ -452,7 +452,7 @@ as well.
 | --- | --- |
 | Immediate abort on the first call, `401`/`403` | `API_KEY` is missing, invalid, or belongs to the other environment (Live key against the Demo API or vice versa). |
 | All leads `FAILED` with `403` on `PATCH` | The key has no write permission, or the leads are not owned by your company. |
-| Individual leads `FAILED` with `400` | The field label does not match the form, or more than one value was to be written. Check `LEADSOURCE_FIELD`/`CAMPAIGN_FIELD`. |
+| Individual leads `FAILED` with `400` | The field label does not match the form, or more than one value was to be written. Check `LEADSOURCE_FIELD`/`CAMPAIGN_FIELD`. If the message is `Invalid request body`, the API rejected the body before it ever reached the service — inspect the payload with `LOG_PAYLOAD_ON_ERROR=true`. |
 | Everything `skipped`, no `WOULD update` line | The strategy yields nothing: wrong source field name, the time window doesn't match, or the source is a select field (array) — then use `currentValue()`. |
 | A field is not set although the CSV supplies a value for it | The target field is already filled and therefore protected — even if the existing value is wrong. Fix it with `OVERWRITE=true`. |
 | Fewer leads processed than exist in the account | Compare the `processed` count with the total in the `X-Total` header of `GET /leads`. On a mismatch, run again — thanks to idempotency it fills the remaining gaps. |
