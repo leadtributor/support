@@ -259,7 +259,11 @@ for await (const { leadId, createdAt } of listLeads()) {
         }
     } catch (error) {
         failed++;
-        console.error(`FAILED lead ${leadId}: ${error.response?.status ?? ''} ${error.message}`);
+        // The response body carries what the message does not: a validation error names the
+        // offending field, and API Gateway's generic "Invalid request body" at least tells you
+        // the payload was rejected before it ever reached the service.
+        const detail = error.response?.data !== undefined ? ` — ${JSON.stringify(error.response.data)}` : '';
+        console.error(`FAILED lead ${leadId}: ${error.response?.status ?? ''} ${error.message}${detail}`);
     }
 
     if (processed % 100 === 0) console.log(`... ${processed} leads processed`);
